@@ -100,13 +100,15 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:12px}
 const ACTION_GROUPS={
  positive:{
   "Offensivaktion":["Tor","Assist","Kreisläufer/Einläufer freigespielt"],
-  "Abwehraktion":["Ballgewinn","Gute Abwehraktion"]
+  "Abwehraktion":["Ballgewinn","Gute Abwehraktion"],
+  "Torhüter":["Parade","Assist"]
  },
  negative:{
   "Offensivaktion":["Fehlwurf"],
-  "Negativaktion":["Abwehrfehler","Ballverlust"],
+  "Defensivaktion":["Abwehrfehler","Ballverlust"],
   "Technischer Fehler":["Technischer Fehler"],
-  "Zeitstrafe o. Ä.":["Zeitstrafe"]
+  "Zeitstrafe o. Ä.":["Zeitstrafe"],
+  "Torhüter":["Gegentor","Fehlpass"]
  }
 };
 const POS=Object.values(ACTION_GROUPS.positive).flat();
