@@ -33,7 +33,7 @@ button{cursor:pointer;font:inherit}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:var(--panel2);padding:12px;border-radius:13px;text-align:center}
 .stat strong{display:block;font-size:25px;font-variant-numeric:tabular-nums}.pos{color:var(--green)}.neg{color:#fb7777}
-.players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.role-label{font-size:11px;color:var(--muted);margin:2px 0 8px}.goalie-toggle{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--muted);font-size:13px}.goalie-toggle input{width:auto;min-width:auto;accent-color:#60a5fa}
 .player{border:1px solid var(--line);border-radius:12px;padding:11px;background:#111c2c;text-align:left;color:var(--text)}
 .player.selected{border:2px solid var(--green);background:#163126}
 .player b{display:block;font-size:14px}.player span{font-size:12px;color:var(--muted)}
@@ -65,7 +65,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:12px}
    <div class="stat"><strong id="totalDiff">0</strong><span class="small">Bilanz</span></div>
   </div>
  </div>
- <div class="card"><h2>1. Spieler auswählen</h2><div id="livePlayers" class="players"></div><p id="noPlayers" class="empty">Lege zuerst Spieler im Kader an.</p></div>
+ <div class="card"><h2>1. Spieler auswählen</h2><div class="role-label">FELDSPIELER</div><div id="livePlayers" class="players"></div><div class="role-label" style="margin-top:14px">TORHÜTER</div><div id="liveGoalkeepers" class="players"></div><p id="noPlayers" class="empty">Lege zuerst Spieler im Kader an.</p></div>
  <div class="card">
   <h2>Aktionserfassung</h2>
   <p class="small">Spieler antippen. Die Aktionsauswahl öffnet sich anschließend als Popup.</p>
@@ -78,41 +78,29 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:12px}
  <div class="card"><h2>Gespeicherte Spiele</h2><p class="small">Gespeicherte Spiele können geöffnet, exportiert oder gelöscht werden.</p><div id="gamesList"></div></div>
 </section>
 <section id="season" class="hidden">
- <div class="card"><h2>Saisonrangliste</h2><p class="small">Gesamtbilanz aus allen gespeicherten Spielen.</p><div id="seasonTable"></div><button class="btn primary" id="exportSeason" style="width:100%;margin-top:14px">⬇ Saison als CSV exportieren</button></div>
+ <div class="card"><h2>Saisonrangliste</h2><p class="small">Feldspieler und Torhüter werden getrennt ausgewertet.</p><div id="seasonTable"></div><button class="btn primary" id="exportSeason" style="width:100%;margin-top:14px">⬇ Saison als CSV exportieren</button></div>
  <div class="card"><h2>Aktionen nach Kategorie</h2><div id="categoryStats"></div></div>
 </section>
 <section id="squad" class="hidden">
- <div class="card"><h2>Spieler hinzufügen</h2><div class="row"><input id="playerNumber" placeholder="Nr." inputmode="numeric" style="max-width:90px"><input id="playerName" placeholder="Vor- und Nachname"></div><button class="btn primary" id="addPlayer" style="width:100%;margin-top:9px">+ Spieler hinzufügen</button></div>
- <div class="card"><h2>Kader verwalten</h2><p class="small">Spieler entfernen löscht keine bereits gespeicherten Spielstatistiken.</p><div id="squadList"></div></div>
+ <div class="card"><h2>Spieler hinzufügen</h2><div class="row"><input id="playerNumber" placeholder="Nr." inputmode="numeric" style="max-width:90px"><input id="playerName" placeholder="Vor- und Nachname"></div><label class="goalie-toggle"><input type="checkbox" id="newPlayerGoalie"> Als Torhüter markieren</label><button class="btn primary" id="addPlayer" style="width:100%;margin-top:9px">+ Spieler hinzufügen</button></div>
+ <div class="card"><h2>Kader verwalten</h2><p class="small">Torhüter werden in der Auswertung separat von Feldspielern geführt. Die Aktionsauswahl ist für beide gleich.</p><div id="squadList"></div></div>
 </section>
 <div id="actionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalPlayerName">
  <div class="modal">
   <div class="modal-head"><div><div class="small">AKTION FÜR</div><h2 id="modalPlayerName" style="margin:3px 0 0"></h2></div><button class="btn ghost" id="closeModal" aria-label="Schließen">✕</button></div>
   <div class="row" style="margin-bottom:13px"><button class="btn good" id="positiveTab" data-modal-type="positive">＋ Positiv</button><button class="btn bad" id="negativeTab" data-modal-type="negative">− Negativ</button></div>
-  <div class="small" style="margin-bottom:8px">KATEGORIE AUSWÄHLEN</div>
-  <div id="modalCategories" class="category-grid"></div>
-  <div id="modalActionArea" class="hidden"><div class="small" style="margin-top:16px">KONKRETE AKTION</div><div id="modalActions" class="modal-actions"></div></div>
+  <div class="small" style="margin-bottom:8px">AKTION AUSWÄHLEN</div>
+  <div id="modalActions" class="modal-actions"></div>
  </div>
 </div>
 <footer>Daten werden lokal in diesem Browser gespeichert. Regelmäßig CSV-Exporte als Sicherung erstellen.</footer>
 </main>
 <script>
-const ACTION_GROUPS={
- positive:{
-  "Offensivaktion":["Tor","Assist","Kreisläufer/Einläufer freigespielt"],
-  "Abwehraktion":["Ballgewinn","Gute Abwehraktion"],
-  "Torhüter":["Parade","Assist"]
- },
- negative:{
-  "Offensivaktion":["Fehlwurf"],
-  "Defensivaktion":["Abwehrfehler","Ballverlust"],
-  "Technischer Fehler":["Technischer Fehler"],
-  "Zeitstrafe o. Ä.":["Zeitstrafe"],
-  "Torhüter":["Gegentor","Fehlpass"]
- }
+const ACTIONS={
+ positive:["Tor","Assist","Ballgewinn","Parade","7m","Abwehr"],
+ negative:["Fehlwurf","Ballverlust","7m","Zeitstrafe","Abwehr"]
 };
-const POS=Object.values(ACTION_GROUPS.positive).flat();
-const NEG=Object.values(ACTION_GROUPS.negative).flat();
+const POS=ACTIONS.positive, NEG=ACTIONS.negative;
 const $=id=>document.getElementById(id);
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 let squad=load("hls_squad",[]), games=load("hls_games",[]), draft=load("hls_draft",{name:"",date:new Date().toISOString().slice(0,10),events:[]}), selected=null;
@@ -125,36 +113,40 @@ function render(){
  $("gameName").value=draft.name;$("gameDate").value=draft.date;
  $("totalPos").textContent=count(draft.events,null,"positive");$("totalNeg").textContent=count(draft.events,null,"negative");
  $("totalDiff").textContent=(diff(draft.events,null)>0?"+":"")+diff(draft.events,null);
- $("livePlayers").innerHTML=squad.map(p=>`<button class="player ${selected===p.id?"selected":""}" data-player="${p.id}"><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b><span>${diff(draft.events,p.id)>0?"+":""}${diff(draft.events,p.id)} Punkte</span></button>`).join("");
+ const field=squad.filter(p=>!p.isGoalkeeper), keepers=squad.filter(p=>p.isGoalkeeper);
+ const playerButtons=list=>list.map(p=>`<button class="player ${selected===p.id?"selected":""}" data-player="${p.id}"><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b><span>${count(draft.events,p.id,"positive")+count(draft.events,p.id,"negative")} Aktionen · ${diff(draft.events,p.id)>0?"+":""}${diff(draft.events,p.id)} Bilanz</span></button>`).join("");
+ $("livePlayers").innerHTML=playerButtons(field);$("liveGoalkeepers").innerHTML=playerButtons(keepers);
  $("noPlayers").classList.toggle("hidden",squad.length>0);
  $("undoBtn").disabled=!draft.events.length;
  $("liveTable").innerHTML=tableFor(squad,draft.events);
- $("squadList").innerHTML=squad.length?squad.map(p=>`<div class="item"><div><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b></div><button class="btn bad" data-remove="${p.id}">Entfernen</button></div>`).join(""):'<p class="empty">Noch keine Spieler im Kader.</p>';
- $("gamesList").innerHTML=games.length?[...games].reverse().map(g=>`<div class="item"><div><b>${esc(g.name||"Spiel ohne Gegner")}</b><div class="small">${esc(g.date)} · ${g.events.length} Aktionen · Bilanz ${(diff(g.events)>0?"+":"")+diff(g.events)}</div></div><div class="row" style="flex:0 0 auto"><button class="btn ghost" data-open="${g.id}">Öffnen</button><button class="btn bad" data-delete="${g.id}">✕</button></div></div>`).join(""):'<p class="empty">Noch keine Spiele gespeichert.</p>';
+ $("squadList").innerHTML=squad.length?squad.map(p=>`<div class="item"><div style="flex:1"><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b><label class="goalie-toggle"><input type="checkbox" data-goalie="${p.id}" ${p.isGoalkeeper?"checked":""}> Torhüter</label></div><button class="btn bad" data-remove="${p.id}">Entfernen</button></div>`).join(""):'<p class="empty">Noch keine Spieler im Kader.</p>';
+ $("gamesList").innerHTML=games.length?[...games].reverse().map(g=>`<div class="item"><div><b>${esc(g.name||"Spiel ohne Gegner")}</b><div class="small">${esc(g.date)} · ${g.events.length} Aktionen · Bilanz ${(diff(g.events)>0?"+":"")}${diff(g.events)}</div></div><div class="row" style="flex:0 0 auto"><button class="btn ghost" data-open="${g.id}">Öffnen</button><button class="btn bad" data-delete="${g.id}">✕</button></div></div>`).join(""):'<p class="empty">Noch keine Spiele gespeichert.</p>';
  const all=games.flatMap(g=>g.events);
- $("seasonTable").innerHTML=tableFor(squad,all,true);
+ const historic=new Map();games.forEach(g=>(g.players||[]).forEach(p=>historic.set(p.id,p)));
+ squad.forEach(p=>historic.set(p.id,p));
+ $("seasonTable").innerHTML=tableFor([...historic.values()],all,true);
  const cats=[...POS.map(a=>({a,t:"positive"})),...NEG.map(a=>({a,t:"negative"}))];
- $("categoryStats").innerHTML=cats.map(c=>`<div class="item"><span>${esc(c.a)}</span><b class="${c.t==="positive"?"pos":"neg"}">${all.filter(e=>e.action===c.a).length}</b></div>`).join("");
+ $("categoryStats").innerHTML=cats.map(c=>`<div class="item"><span>${c.t==="positive"?"＋":"−"} ${esc(c.a)}</span><b class="${c.t==="positive"?"pos":"neg"}">${all.filter(e=>e.action===c.a&&e.type===c.t).length}</b></div>`).join("");
  persist();
 }
 function tableFor(players,events,season=false){
  if(!players.length)return '<p class="empty">Noch keine Spieler angelegt.</p>';
- const rows=players.map(p=>({p,plus:count(events,p.id,"positive"),minus:count(events,p.id,"negative")})).sort((a,b)=>(b.plus-b.minus)-(a.plus-a.minus));
- return `<table><thead><tr><th>Spieler</th><th>+</th><th>−</th><th>Bilanz</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.p.number?"#"+esc(r.p.number)+" ":""}${esc(r.p.name)}</td><td class="pos">${r.plus}</td><td class="neg">${r.minus}</td><td><b>${r.plus-r.minus>0?"+":""}${r.plus-r.minus}</b></td></tr>`).join("")}</tbody></table>`;
+ const makeTable=(list,title)=>{
+  if(!list.length)return '';
+  const rows=list.map(p=>({p,plus:count(events,p.id,"positive"),minus:count(events,p.id,"negative")})).sort((a,b)=>(b.plus+b.minus)-(a.plus+a.minus));
+  return `<h3 style="margin-top:14px">${title}</h3><table><thead><tr><th>Spieler</th><th>+</th><th>−</th><th>Gesamt</th><th>Bilanz</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.p.number?"#"+esc(r.p.number)+" ":""}${esc(r.p.name)}</td><td class="pos">${r.plus}</td><td class="neg">${r.minus}</td><td><b>${r.plus+r.minus}</b></td><td><b>${r.plus-r.minus>0?"+":""}${r.plus-r.minus}</b></td></tr>`).join("")}</tbody></table>`;
+ };
+ return makeTable(players.filter(p=>!p.isGoalkeeper),"FELDSPIELER")+makeTable(players.filter(p=>p.isGoalkeeper),"TORHÜTER");
 }
-let modalType="positive", modalCategory=null;
+let modalType="positive";
 function renderModalActions(){
- const groups=ACTION_GROUPS[modalType];
- const categories=Object.keys(groups);
- if(!categories.includes(modalCategory))modalCategory=null;
- $("modalCategories").innerHTML=categories.map(c=>`<button class="category ${modalCategory===c?"selected":""}" data-category="${esc(c)}">${esc(c)}</button>`).join("");
- $("modalActionArea").classList.toggle("hidden",!modalCategory);
- $("modalActions").innerHTML=modalCategory?groups[modalCategory].map(a=>`<button class="action ${modalType==="negative"?"minus":""}" data-action="${esc(a)}" data-type="${modalType}">${modalType==="positive"?"＋":"−"} ${esc(a)}</button>`).join(""):"";
+ const actions=ACTIONS[modalType];
+ $("modalActions").innerHTML=actions.map(a=>`<button class="action ${modalType==="negative"?"minus":""}" data-action="${esc(a)}" data-type="${modalType}">${modalType==="positive"?"＋":"−"} ${esc(a)}</button>`).join("");
  document.querySelectorAll("[data-modal-type]").forEach(b=>{b.classList.toggle("active",b.dataset.modalType===modalType);b.setAttribute("aria-pressed",String(b.dataset.modalType===modalType))});
 }
 function openActionModal(){
  if(selected==null)return;
- modalType="positive";modalCategory=null;
+ modalType="positive";
  $("modalPlayerName").textContent=squad.find(p=>p.id===selected)?.name||"Spieler";
  renderModalActions();
  $("actionModal").classList.remove("hidden");
@@ -163,7 +155,7 @@ function closeActionModal(){$("actionModal").classList.add("hidden")}
 function addEvent(action,type){if(selected==null)return;draft.events.push({id:Date.now()+Math.random(),playerId:selected,action,type});closeActionModal();render()}
 $("gameName").addEventListener("input",e=>{draft.name=e.target.value;persist()});
 $("gameDate").addEventListener("change",e=>{draft.date=e.target.value;persist()});
-$("addPlayer").onclick=()=>{let n=$("playerName").value.trim();if(!n)return;let num=$("playerNumber").value.trim();squad.push({id:Date.now()+Math.random(),name:n,number:num});$("playerName").value="";$("playerNumber").value="";render()};
+$("addPlayer").onclick=()=>{let n=$("playerName").value.trim();if(!n)return;let num=$("playerNumber").value.trim();squad.push({id:Date.now()+Math.random(),name:n,number:num,isGoalkeeper:$("newPlayerGoalie").checked});$("playerName").value="";$("playerNumber").value="";$("newPlayerGoalie").checked=false;render()};
 $("playerName").addEventListener("keydown",e=>{if(e.key==="Enter")$("addPlayer").click()});
 $("undoBtn").onclick=()=>{draft.events.pop();render()};
 $("saveGameBtn").onclick=()=>{if(!draft.events.length){alert("Bitte zuerst mindestens eine Aktion erfassen.");return}let id=Date.now();games.push({id,name:draft.name||"Spiel",date:draft.date||"",events:[...draft.events],players:squad.map(p=>({...p}))});draft={name:"",date:new Date().toISOString().slice(0,10),events:[]};selected=null;render();alert("Spiel wurde gespeichert.")};
@@ -176,11 +168,11 @@ document.addEventListener("click",e=>{
 });
 $("closeModal").onclick=closeActionModal;
 $("actionModal").addEventListener("click",e=>{if(e.target===$("actionModal"))closeActionModal()});
-document.querySelectorAll("[data-modal-type]").forEach(b=>b.onclick=()=>{modalType=b.dataset.modalType;modalCategory=null;renderModalActions()});
-document.addEventListener("click",e=>{const c=e.target.closest("[data-category]");if(c){modalCategory=c.dataset.category;renderModalActions()}});
+document.querySelectorAll("[data-modal-type]").forEach(b=>b.onclick=()=>{modalType=b.dataset.modalType;renderModalActions()});
+document.addEventListener("change",e=>{const g=e.target.closest("[data-goalie]");if(g){const p=squad.find(x=>x.id===Number(g.dataset.goalie));if(p){p.isGoalkeeper=g.checked;render()}}});
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x===b));["live","games","season","squad"].forEach(t=>$(t).classList.toggle("hidden",t!==b.dataset.tab));render()});
 function csvDownload(filename,rows){const csv=rows.map(r=>r.map(x=>'"'+String(x??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url)}
-$("exportSeason").onclick=()=>{let all=games.flatMap(g=>g.events),rows=[["Spieler","Nummer","Positive","Negative","Bilanz"],...squad.map(p=>[p.name,p.number,count(all,p.id,"positive"),count(all,p.id,"negative"),diff(all,p.id)])];csvDownload("handball-saison.csv",rows)};
+$("exportSeason").onclick=()=>{let all=games.flatMap(g=>g.events),people=new Map();games.forEach(g=>(g.players||[]).forEach(p=>people.set(p.id,p)));squad.forEach(p=>people.set(p.id,p));let rows=[["Rolle","Spieler","Nummer","Positive","Negative","Gesamtaktionen","Bilanz"],...[...people.values()].map(p=>[p.isGoalkeeper?"Torhüter":"Feldspieler",p.name,p.number,count(all,p.id,"positive"),count(all,p.id,"negative"),count(all,p.id,"positive")+count(all,p.id,"negative"),diff(all,p.id)])];csvDownload("handball-saison.csv",rows)};
 render();
 </script>
 <script>
