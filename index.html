@@ -138,7 +138,7 @@ function render(){
  $("noPlayers").classList.toggle("hidden",squad.length>0);
  $("undoBtn").disabled=!draft.events.length;
  $("liveTable").innerHTML=tableFor(squad,draft.events);
- $("squadList").innerHTML=squad.length?squad.map(p=>`<div class="item"><div style="flex:1"><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b><label class="goalie-toggle"><input type="checkbox" data-goalie="${p.id}" ${p.isGoalkeeper?"checked":""}> Torhüter</label></div><button class="btn bad" data-remove="${p.id}">Entfernen</button></div>`).join(""):'<p class="empty">Noch keine Spieler im Kader.</p>';
+ $("squadList").innerHTML=squad.length?squad.map(p=>`<div class="item"><div style="flex:1"><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b><label class="goalie-toggle"><input type="checkbox" data-goalie="${p.id}" ${p.isGoalkeeper?"checked":""}> Torhüter</label></div><div class="row" style="flex:0 0 auto;gap:6px"><button class="btn ghost" data-edit="${p.id}">Bearbeiten</button><button class="btn bad" data-remove="${p.id}">Entfernen</button></div></div>`).join(""):'<p class="empty">Noch keine Spieler im Kader.</p>';
  $("gamesList").innerHTML=games.length?[...games].reverse().map(g=>`<div class="item"><div><b>${esc(g.name||"Spiel ohne Gegner")}</b><div class="small">${esc(g.date)} · ${g.events.length} Aktionen · Bilanz ${(diff(g.events)>0?"+":"")}${diff(g.events)}</div></div><div class="row" style="flex:0 0 auto"><button class="btn ghost" data-open="${g.id}">Öffnen</button><button class="btn bad" data-delete="${g.id}">✕</button></div></div>`).join(""):'<p class="empty">Noch keine Spiele gespeichert.</p>';
  const all=games.flatMap(g=>g.events);
  const historic=new Map();games.forEach(g=>(g.players||[]).forEach(p=>historic.set(p.id,p)));
@@ -152,7 +152,7 @@ function tableFor(players,events,season=false){
  if(!players.length)return '<p class="empty">Noch keine Spieler angelegt.</p>';
  const makeTable=(list,title,isGoalkeeper=false)=>{
   if(!list.length)return '';
-  const rows=list.map(p=>{const plus=count(events,p.id,"positive"),minus=count(events,p.id,"negative"),keeper=keeperStats(events,p.id);return {p,plus,minus,total:plus+minus+(p.isGoalkeeper?keeper.saves+keeper.goals+keeper.missed:0),keeper}}).sort((a,b)=>b.total-a.total);
+  const rows=list.map(p=>{const plus=count(events,p.id,"positive"),minus=count(events,p.id,"negative"),keeper=keeperStats(events,p.id);return {p,plus,minus,total:plus+minus+(p.isGoalkeeper?keeper.goals+keeper.missed:0),keeper}}).sort((a,b)=>b.total-a.total);
   if(isGoalkeeper){
    return `<h3 style="margin-top:14px">${title}</h3><div class="keeper-results">${rows.map(r=>`<div class="keeper-result"><div class="keeper-result-head"><b>${r.p.number?"#"+esc(r.p.number)+" ":""}${esc(r.p.name)}</b><span class="small">${r.total} Aktionen</span></div><div class="keeper-quote">Haltequote: ${r.keeper.rate===null?"–":r.keeper.rate+" %"}</div><div class="keeper-balance"><span class="pos">Plus +${r.plus}</span><span class="neg">Minus −${r.minus}</span><span>Bilanz ${r.plus-r.minus>0?"+":""}${r.plus-r.minus}</span></div><div class="keeper-detail"><div><b class="pos">${r.keeper.saves}</b><span>Paraden</span></div><div><b class="neg">${r.keeper.goals}</b><span>Gegentore</span></div><div><b>${r.keeper.missed}</b><span>Daneben</span></div><div><b>${r.total}</b><span>Aktionen</span></div></div></div>`).join("")}</div><p class="small">Haltequote = Paraden ÷ (Paraden + Gegentore). „Wurf daneben“ zählt nicht in die Quote.</p>`;
   }
@@ -189,6 +189,7 @@ $("saveGameBtn").onclick=()=>{if(!draft.events.length){alert("Bitte zuerst minde
 document.addEventListener("click",e=>{
  const p=e.target.closest("[data-player]");if(p){selected=Number(p.dataset.player);render();openActionModal();return}
  const a=e.target.closest("[data-action]");if(a){addEvent(a.dataset.action,a.dataset.type);return}
+ const edit=e.target.closest("[data-edit]");if(edit){const id=Number(edit.dataset.edit),player=squad.find(x=>x.id===id);if(!player)return;const name=prompt("Spielername bearbeiten:",player.name);if(name===null)return;const cleanName=name.trim();if(!cleanName){alert("Der Spielername darf nicht leer sein.");return}const number=prompt("Rückennummer bearbeiten:",player.number||"");if(number===null)return;player.name=cleanName;player.number=number.trim();games.forEach(g=>(g.players||[]).forEach(old=>{if(old.id===id){old.name=cleanName;old.number=player.number}}));render();return}
  const r=e.target.closest("[data-remove]");if(r){if(confirm("Spieler aus dem aktuellen Kader entfernen? Alte Spielstatistiken bleiben erhalten.")){squad=squad.filter(p=>p.id!==Number(r.dataset.remove));if(selected===Number(r.dataset.remove))selected=null;render()}return}
  const o=e.target.closest("[data-open]");if(o){const g=games.find(x=>x.id===Number(o.dataset.open));if(g){draft={name:g.name,date:g.date,events:[...g.events]};selected=null;document.querySelector('[data-tab="live"]').click();render()}return}
  const d=e.target.closest("[data-delete]");if(d&&confirm("Dieses Spiel endgültig löschen?")){games=games.filter(g=>g.id!==Number(d.dataset.delete));render()}
