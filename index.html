@@ -33,10 +33,10 @@ button{cursor:pointer;font:inherit}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:var(--panel2);padding:12px;border-radius:13px;text-align:center}
 .stat strong{display:block;font-size:25px;font-variant-numeric:tabular-nums}.pos{color:var(--green)}.neg{color:#fb7777}
-.players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.role-label{font-size:11px;color:var(--muted);margin:2px 0 8px}.goalie-toggle{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--muted);font-size:13px}.goalie-toggle input{width:auto;min-width:auto;accent-color:#60a5fa}
-.player{border:1px solid var(--line);border-radius:12px;padding:11px;background:#111c2c;text-align:left;color:var(--text)}
+.players{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}.role-label{font-size:11px;color:var(--muted);margin:2px 0 8px}.goalie-toggle{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--muted);font-size:13px}.goalie-toggle input{width:auto;min-width:auto;accent-color:#60a5fa}
+.player{aspect-ratio:4/3;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;overflow:hidden;border:1px solid var(--line);border-radius:7px;padding:3px;background:#111c2c;text-align:left;color:var(--text);min-width:0;line-height:1.15}
 .player.selected{border:2px solid var(--green);background:#163126}
-.player b{display:block;font-size:14px}.player span{font-size:12px;color:var(--muted)}
+.player b{display:block;font-size:10.5px;line-height:1.15;overflow-wrap:anywhere}.player span{display:block;font-size:8px;line-height:1.15;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
 .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .action{padding:13px 9px;border:1px solid #237a49;background:#123322;color:#d8ffe5;border-radius:12px;font-weight:700;min-height:52px}
 .action.minus{border-color:#873b3b;background:#351b24;color:#ffe0e0}
@@ -46,7 +46,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 6px;
 .empty{text-align:center;padding:22px 10px;color:var(--muted)}
 .modal-backdrop{position:fixed;inset:0;background:#000b;display:flex;align-items:flex-end;justify-content:center;padding:12px;z-index:20}.modal{width:100%;max-width:560px;max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:17px;box-shadow:0 20px 60px #0009}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.category{padding:15px 10px;border:1px solid var(--line);background:#203047;color:var(--text);border-radius:12px;font-weight:750;min-height:58px}.category.selected{border:2px solid var(--blue);background:#1c3c5e}.modal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.modal-actions .action{min-height:54px}.modal-backdrop.hidden{display:none!important}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:12px}
-@media(min-width:600px){.players{grid-template-columns:repeat(3,minmax(0,1fr))}.actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:600px){.players{grid-template-columns:repeat(5,minmax(0,1fr))}.actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -123,8 +123,11 @@ function render(){
  $("totalPos").textContent=count(fieldEvents,null,"positive");$("totalNeg").textContent=count(fieldEvents,null,"negative");
  $("totalDiff").textContent=(diff(fieldEvents,null)>0?"+":"")+diff(fieldEvents,null);
  const playerButtons=list=>list.map(p=>{
-  const total=count(draft.events,p.id,"positive")+count(draft.events,p.id,"negative");
-  const extra=p.isGoalkeeper?(keeperStats(draft.events,p.id).rate===null?"Noch keine Quote":keeperStats(draft.events,p.id).rate+" % gehalten"):((diff(draft.events,p.id)>0?"+":"")+diff(draft.events,p.id)+" Bilanz");
+  const plus=count(draft.events,p.id,"positive"), minus=count(draft.events,p.id,"negative"), total=plus+minus;
+  const balance=diff(draft.events,p.id);
+  const extra=p.isGoalkeeper
+   ? `${keeperStats(draft.events,p.id).rate===null?"Quote –":keeperStats(draft.events,p.id).rate+" % gehalten"} · <span class="pos">+${plus}</span> / <span class="neg">−${minus}</span>`
+   : ((balance>0?"+":"")+balance+" Bilanz");
   return `<button class="player ${selected===p.id?"selected":""}" data-player="${p.id}"><b>${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</b><span>${total} Aktionen · ${extra}</span></button>`;
  }).join("");
  $("livePlayers").innerHTML=playerButtons(field);$("liveGoalkeepers").innerHTML=playerButtons(keepers);
