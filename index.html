@@ -111,7 +111,7 @@ let squad=load("hls_squad",[]), games=load("hls_games",[]), draft=load("hls_draf
 function persist(){localStorage.setItem("hls_squad",JSON.stringify(squad));localStorage.setItem("hls_games",JSON.stringify(games));localStorage.setItem("hls_draft",JSON.stringify(draft))}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function playerName(id){return squad.find(p=>p.id===id)?.name||games.flatMap(g=>g.players||[]).find(p=>p.id===id)?.name||"Unbekannt"}
-function count(events,id,type){return events.filter(e=>(id==null||e.playerId===id)&&e.type===type).length}
+function count(events,id,type){return events.filter(e=>(id==null||e.playerId===id)&&e.type===type&&((type!=="positive"&&type!=="negative")||!(["Gegentor","Wurf daneben"].includes(e.action)))).length}
 function diff(events,id){return count(events,id,"positive")-count(events,id,"negative")}
 function keeperStats(events,id){
  const saves=events.filter(e=>e.playerId===id&&e.action==="Parade").length;
@@ -144,15 +144,15 @@ function render(){
  const historic=new Map();games.forEach(g=>(g.players||[]).forEach(p=>historic.set(p.id,p)));
  squad.forEach(p=>historic.set(p.id,p));
  $("seasonTable").innerHTML=tableFor([...historic.values()],all,true);
- const cats=[...POS.map(a=>({a,t:"positive"})),{a:"Wurf daneben",t:"positive"},...NEG.map(a=>({a,t:"negative"})),{a:"Gegentor",t:"negative"}];
- $("categoryStats").innerHTML=cats.map(c=>`<div class="item"><span>${c.t==="positive"?"＋":"−"} ${esc(c.a)}</span><b class="${c.t==="positive"?"pos":"neg"}">${all.filter(e=>e.action===c.a&&e.type===c.t).length}</b></div>`).join("");
+ const cats=[...POS.map(a=>({a,t:"positive",mark:"＋",cls:"pos"})),...NEG.map(a=>({a,t:"negative",mark:"−",cls:"neg"})),{a:"Wurf daneben",t:"neutral",mark:"•",cls:""},{a:"Gegentor",t:"neutral",mark:"•",cls:""}];
+ $("categoryStats").innerHTML=cats.map(c=>`<div class="item"><span>${c.mark} ${esc(c.a)}</span><b class="${c.cls}">${all.filter(e=>e.action===c.a&&(e.type===c.t || ((c.a==="Wurf daneben"||c.a==="Gegentor") && (e.type==="positive"||e.type==="negative"||e.type==="neutral")))).length}</b></div>`).join("");
  persist();
 }
 function tableFor(players,events,season=false){
  if(!players.length)return '<p class="empty">Noch keine Spieler angelegt.</p>';
  const makeTable=(list,title,isGoalkeeper=false)=>{
   if(!list.length)return '';
-  const rows=list.map(p=>({p,plus:count(events,p.id,"positive"),minus:count(events,p.id,"negative"),total:count(events,p.id,"positive")+count(events,p.id,"negative"),keeper:keeperStats(events,p.id)})).sort((a,b)=>b.total-a.total);
+  const rows=list.map(p=>{const plus=count(events,p.id,"positive"),minus=count(events,p.id,"negative"),keeper=keeperStats(events,p.id);return {p,plus,minus,total:plus+minus+(p.isGoalkeeper?keeper.saves+keeper.goals+keeper.missed:0),keeper}}).sort((a,b)=>b.total-a.total);
   if(isGoalkeeper){
    return `<h3 style="margin-top:14px">${title}</h3><div class="keeper-results">${rows.map(r=>`<div class="keeper-result"><div class="keeper-result-head"><b>${r.p.number?"#"+esc(r.p.number)+" ":""}${esc(r.p.name)}</b><span class="small">${r.total} Aktionen</span></div><div class="keeper-quote">Haltequote: ${r.keeper.rate===null?"–":r.keeper.rate+" %"}</div><div class="keeper-balance"><span class="pos">Plus +${r.plus}</span><span class="neg">Minus −${r.minus}</span><span>Bilanz ${r.plus-r.minus>0?"+":""}${r.plus-r.minus}</span></div><div class="keeper-detail"><div><b class="pos">${r.keeper.saves}</b><span>Paraden</span></div><div><b class="neg">${r.keeper.goals}</b><span>Gegentore</span></div><div><b>${r.keeper.missed}</b><span>Daneben</span></div><div><b>${r.total}</b><span>Aktionen</span></div></div></div>`).join("")}</div><p class="small">Haltequote = Paraden ÷ (Paraden + Gegentore). „Wurf daneben“ zählt nicht in die Quote.</p>`;
   }
@@ -163,12 +163,12 @@ function tableFor(players,events,season=false){
 let modalType="positive";
 function renderModalActions(){
  const player=squad.find(p=>p.id===selected);
- const actions=[...ACTIONS[modalType]];
+ const actions=[...ACTIONS[modalType].map(a=>({name:a,type:modalType}))];
  if(player?.isGoalkeeper){
-  if(modalType==="positive")actions.push("Wurf daneben");
-  if(modalType==="negative")actions.push("Gegentor");
+  if(modalType==="positive")actions.push({name:"Wurf daneben",type:"neutral"});
+  if(modalType==="negative")actions.push({name:"Gegentor",type:"neutral"});
  }
- $("modalActions").innerHTML=actions.map(a=>`<button class="action ${modalType==="negative"?"minus":""}" data-action="${esc(a)}" data-type="${modalType}">${modalType==="positive"?"＋":"−"} ${esc(a)}</button>`).join("");
+ $("modalActions").innerHTML=actions.map(x=>`<button class="action ${x.type==="negative"?"minus":""}" data-action="${esc(x.name)}" data-type="${x.type}">${x.type==="positive"?"＋":x.type==="negative"?"−":"•"} ${esc(x.name)}</button>`).join("");
  document.querySelectorAll("[data-modal-type]").forEach(b=>{b.classList.toggle("active",b.dataset.modalType===modalType);b.setAttribute("aria-pressed",String(b.dataset.modalType===modalType))});
 }
 function openActionModal(){
@@ -179,7 +179,7 @@ function openActionModal(){
  $("actionModal").classList.remove("hidden");
 }
 function closeActionModal(){$("actionModal").classList.add("hidden")}
-function addEvent(action,type){if(selected==null)return;draft.events.push({id:Date.now()+Math.random(),playerId:selected,action,type});closeActionModal();render()}
+function addEvent(action,type){if(selected==null)return;const player=squad.find(p=>p.id===selected);if(player?.isGoalkeeper&&(action==="Gegentor"||action==="Wurf daneben"))type="neutral";draft.events.push({id:Date.now()+Math.random(),playerId:selected,action,type});closeActionModal();render()}
 $("gameName").addEventListener("input",e=>{draft.name=e.target.value;persist()});
 $("gameDate").addEventListener("change",e=>{draft.date=e.target.value;persist()});
 $("addPlayer").onclick=()=>{let n=$("playerName").value.trim();if(!n)return;let num=$("playerNumber").value.trim();squad.push({id:Date.now()+Math.random(),name:n,number:num,isGoalkeeper:$("newPlayerGoalie").checked});$("playerName").value="";$("playerNumber").value="";$("newPlayerGoalie").checked=false;render()};
