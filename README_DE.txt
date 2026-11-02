@@ -16,3 +16,11 @@ Installation über GitHub Pages:
 5. Falls das alte Logo bleibt: Home-Bildschirm-Verknüpfung entfernen und über Safari erneut hinzufügen.
 
 Hinweis: Vorhandene Spieldaten vorsichtshalber vorher exportieren.
+
+
+Update v11 – Spieler-Auswahl
+- Smartphone: 3 Spalten für größere, gut lesbare Spielerkacheln.
+- Ab 420 px: 4 Spalten; ab 600 px: 5 Spalten.
+- Kacheln mit ausgewogenerem Seitenverhältnis und zentrierter Darstellung.
+- Torhüter-Kacheln zeigen Quote und Plus/Minus kompakt untereinander; doppelte Aktionszeile entfällt.
+- Service-Worker-Cache auf v14 aktualisiert.
